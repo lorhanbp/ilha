@@ -8,7 +8,7 @@ struct ClipItem: Codable, Identifiable, Equatable {
     var imageSize: String?
 }
 
-/// Guarda as últimas cópias (texto e imagem) e apaga cada uma 24 h depois.
+/// Guarda as últimas cópias (texto e imagem) e apaga cada uma depois do prazo dos Ajustes.
 @MainActor
 final class ClipboardStore: ObservableObject {
     @Published private(set) var items: [ClipItem] = []
@@ -16,8 +16,8 @@ final class ClipboardStore: ObservableObject {
 
     private let directory: URL
     private let indexFile: URL
-    private let limit = 5
-    private let lifetime: TimeInterval = 24 * 3600
+    private var limit: Int { Settings.shared.clipboardLimit }
+    private var lifetime: TimeInterval { TimeInterval(Settings.shared.clipboardHours) * 3600 }
     private var lastChange = NSPasteboard.general.changeCount
     private var ownChange: Int?
     private var thumbnails: [UUID: NSImage] = [:]
@@ -106,10 +106,10 @@ final class ClipboardStore: ObservableObject {
     private func purge() {
         let cutoff = Date().addingTimeInterval(-lifetime)
         let expired = items.filter { $0.date < cutoff }
-        guard !expired.isEmpty else { return }
         expired.forEach(deleteFile)
         items.removeAll { $0.date < cutoff }
-        save()
+        while items.count > limit { deleteFile(items.removeLast()) }
+        if !expired.isEmpty { save() }
     }
 
     private func deleteFile(_ item: ClipItem) {

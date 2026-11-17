@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: NSPanel!
     private let music = MusicModel()
     private var state: IslandState!
+    private var settingsWindow: NSWindow?
     private var subscriptions = Set<AnyCancellable>()
     private let hud = HUDModel()
     private let popupGuard = NativePopupGuard()
@@ -28,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             notchHeight = screen.safeAreaInsets.top
         }
         state = IslandState(notchWidth: notchWidth, notchHeight: notchHeight)
+        state.openSettings = { [weak self] in self?.showSettings() }
 
         let size = IslandLayout.expandedSize
         let frame = NSRect(x: screen.frame.midX - size.width / 2, y: screen.frame.maxY - size.height,
@@ -64,6 +66,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Timer.scheduledTimer(withTimeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.mouseMoved() }
         }
+    }
+
+    func showSettings() {
+        if settingsWindow == nil {
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 400),
+                                  styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            window.title = "Ajustes da Ilha"
+            window.isReleasedWhenClosed = false
+            window.contentView = NSHostingView(rootView: SettingsView(settings: .shared))
+            window.center()
+            settingsWindow = window
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow?.makeKeyAndOrderFront(nil)
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showSettings()
+        return true
     }
 
     private func mouseMoved() {

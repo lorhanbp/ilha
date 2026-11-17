@@ -7,7 +7,7 @@ final class MediaKeys {
     private let music: MusicModel
     private let hud: HUDModel
     private var quitHold: Task<Void, Never>?
-    private let holdSeconds = 1.2
+    private var holdSeconds: Double { Settings.shared.quitHoldSeconds }
     private let protectedApps: Set<String> = ["com.anthropic.claudefordesktop", "com.apple.Terminal", "com.apple.Safari",
                                               "com.anysphere.sand", "com.todesktop.230313mzl4w4u92"]
     var onClipboardShortcut: () -> Void = {}
@@ -88,13 +88,21 @@ final class MediaKeys {
             let code = event.getIntegerValueField(.keyboardEventKeycode)
             let flags = event.flags
             let repeating = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
-            if code == 12, flags.contains(.maskCommand), flags.isDisjoint(with: [.maskAlternate, .maskControl, .maskShift]),
+            if Settings.shared.recording {
+                if code == 53 { Settings.shared.recording = false; return nil }
+                if !flags.intersection(Settings.relevantFlags).isEmpty {
+                    let label = NSEvent(cgEvent: event)?.charactersIgnoringModifiers ?? "?"
+                    Settings.shared.setShortcut(code: code, flags: flags, label: label)
+                    return nil
+                }
+                return pass
+            }
+            if Settings.shared.quitHoldEnabled, code == 12, flags.contains(.maskCommand), flags.isDisjoint(with: [.maskAlternate, .maskControl, .maskShift]),
                let app = NSWorkspace.shared.frontmostApplication, protectedApps.contains(app.bundleIdentifier ?? "") {
                 if !repeating { startQuit(app) }
                 return nil
             }
-            if code == 7, flags.contains(.maskAlternate),
-               flags.isDisjoint(with: [.maskCommand, .maskControl, .maskShift]) {
+            if Settings.shared.matches(code: code, flags: flags) {
                 if !repeating { onClipboardShortcut() }
                 return nil
             }

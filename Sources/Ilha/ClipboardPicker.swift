@@ -14,6 +14,10 @@ final class ClipboardPicker {
     private var panel: NSPanel?
     private var clickMonitor: Any?
 
+    /// Teclas 1–9 (fileira de cima e teclado numérico).
+    private static let numberKeys: [Int64: Int] = [18: 0, 19: 1, 20: 2, 21: 3, 23: 4, 22: 5, 26: 6, 28: 7, 25: 8,
+                                                   83: 0, 84: 1, 85: 2, 86: 3, 87: 4, 88: 5, 89: 6, 91: 7, 92: 8]
+
     var isVisible: Bool { panel?.isVisible == true }
 
     init(store: ClipboardStore) { self.store = store }
@@ -22,7 +26,7 @@ final class ClipboardPicker {
 
     func show() {
         model.selected = 0
-        let rows = max(1, min(store.items.count, 5))
+        let rows = max(1, min(store.items.count, 9))
         let size = CGSize(width: 340, height: store.items.isEmpty ? 84 : CGFloat(40 + rows * 34 + 10))
         let view = ClipboardPickerView(store: store, model: model) { [weak self] index in self?.choose(index) }
         let panel = NSPanel(contentRect: NSRect(origin: .zero, size: size),
@@ -78,8 +82,7 @@ final class ClipboardPicker {
         guard isVisible else { return false }
         switch code {
         case 53: hide()
-        case 18, 19, 20, 21, 23: choose([18: 0, 19: 1, 20: 2, 21: 3, 23: 4][code] ?? 0)
-        case 83, 84, 85, 86, 87: choose(Int(code) - 83)
+        case let key where Self.numberKeys[key] != nil: choose(Self.numberKeys[key] ?? 0)
         case 126: model.selected = max(0, model.selected - 1)
         case 125: model.selected = min(max(store.items.count - 1, 0), model.selected + 1)
         case 36, 76: choose(model.selected)
@@ -99,7 +102,7 @@ struct ClipboardPickerView: View {
             HStack {
                 Text("Área de transferência").font(.system(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.55))
                 Spacer()
-                Text("1–5 cola · esc").font(.system(size: 10)).foregroundStyle(.white.opacity(0.35))
+                Text("1–\(max(store.items.count, 1)) cola · esc").font(.system(size: 10)).foregroundStyle(.white.opacity(0.35))
             }
             .frame(height: 26)
             if store.items.isEmpty {

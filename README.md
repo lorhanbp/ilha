@@ -6,14 +6,43 @@ Uma "ilha dinâmica" para o notch do MacBook, feita em Swift. Ela fica em volta 
 
 ## O que faz
 
-- **Música:** capa do álbum e equalizador ao lado do notch. Passe o mouse e a ilha abre com título, artista, barra de progresso, anterior, play/pause, próxima e botões de ±10 s. Pausada, ela mantém a última faixa e as barrinhas ficam paradas.
-- **Volume e brilho:** as teclas mostram um indicador na ilha, no lugar do HUD do macOS.
-- **Área de transferência:** guarda as últimas 5 cópias (texto e imagem) e apaga cada uma depois de 24 h. **⌥ X** abre um seletor junto do mouse, em qualquer tela. Escolha com **1 a 5**, setas e Return, ou clique: o item já é colado no app em foco. Cópias marcadas como senha pelos gerenciadores de senha não são guardadas.
-- **Energia:** bateria em anel, watts do sistema e do adaptador, voltagem, saúde e ciclos, e a bateria de mouse, teclado e fones.
-- **Sistema:** CPU, RAM, GPU, SSD e temperatura.
-- **Aviso de acessórios:** ao conectar ou desconectar mouse, fones ou iPhone (por cabo), a ilha mostra o ícone ao lado do notch.
-- **Proteção do ⌘Q:** em alguns apps é preciso segurar ⌘Q por ~1,2 s para fechar.
-- **F7/F8/F9:** quando o macOS solta a sessão de música, a tecla de play é redirecionada para o player em vez de abrir o Apple Music.
+A ilha fica em volta da câmera. Fechada, mostra só o essencial; ao passar o mouse, ela abre com quatro abas e um botão de ajustes.
+
+**Música** (aba da nota musical)
+- Fechada: capa do álbum à esquerda e equalizador à direita do notch. O equalizador anima enquanto toca e fica parado, com as cinco barras iguais, quando pausa.
+- Aberta: capa, título, artista, barra de progresso, anterior, play/pause, próxima e botões de ±10 s.
+- Arrastar ou clicar na barra pula para aquele ponto, com precisão de uns 5 s.
+- Pausada, a ilha mantém a última faixa na tela, mesmo depois de o macOS soltar a sessão de música.
+
+**Volume e brilho**
+- As teclas de volume, mudo e brilho passam a mostrar um indicador na ilha, no lugar do HUD do macOS, com o ícone de alto-falante ou sol e uma barrinha.
+
+**Área de transferência** (aba da prancheta)
+- Guarda as últimas cópias (padrão: 5), de texto e de imagem, e apaga cada uma depois de um prazo (padrão: 24 h).
+- O atalho (padrão **⌥ X**) abre um seletor **junto do mouse**, na tela onde ele estiver. Escolha com as teclas **1 a 9**, as setas e Return, ou clicando. O item escolhido é copiado e **colado no app em foco**.
+- Cópias que os gerenciadores de senha marcam como senha não são guardadas.
+
+**Energia** (aba do raio)
+- Bateria em anel, com o estado (na bateria, na tomada ou carregando) e o tempo restante.
+- Consumo do sistema em watts, o que o adaptador está entregando ("6 de 35 W") com a voltagem, saúde da bateria e ciclos.
+- Bateria de mouse, teclado e fones conectados, cada um com seu anel.
+
+**Sistema** (aba do chip)
+- CPU, RAM, GPU e SSD, com anel colorido pela carga, e a temperatura do processador e da bateria.
+
+**Avisos na própria ilha**
+- Ao conectar ou desconectar mouse, teclado, fones ou iPhone (por cabo), aparece o ícone do aparelho e a bateria dele ao lado do notch. O aviso também sai quando a bateria do aparelho chega a 20%.
+- Ao ligar ou desligar o carregador, a ilha mostra a bateria do Mac por alguns segundos.
+- Experimental: a Ilha tenta esconder o aviso nativo de "Conectado" do Bluetooth.
+
+**Proteção do ⌘Q**
+- Em Claude, Terminal, Safari, Grok Bot e Cursor, o ⌘Q só fecha o app se você segurar por 1,2 s. Uma barrinha na ilha mostra o progresso. A lista de apps fica no código.
+
+**Teclas de mídia**
+- Quando o macOS já soltou a sessão de música, o F8 deixa de abrir o Apple Music: a Ilha aperta o play do player configurado, sem trazê-lo pra frente. O F7 e o F9 não fazem nada nessa situação.
+
+**Ajustes**
+- Clique na engrenagem da ilha aberta (ou abra o app de novo) para mudar: o atalho da área de transferência (clique em Gravar e aperte as teclas), quantas cópias guardar e por quanto tempo, a proteção do ⌘Q (liga/desliga e o tempo) e abrir ao ligar o Mac.
 
 ## Requisitos
 
@@ -39,14 +68,12 @@ A Ilha captura teclas e controla outros apps pela Acessibilidade. No macOS 27 is
 
 ## Ajustes que você provavelmente vai querer
 
-Esses valores estão no código, no começo de cada arquivo:
+O atalho, a quantidade de cópias, o prazo e a proteção do ⌘Q estão na janela de Ajustes. Estes continuam no código:
 
 | O quê | Onde |
 | --- | --- |
 | App do YouTube Music (web app do Safari) usado no F8 e nos botões | `Sources/Ilha/YTMusic.swift` (`appURL`) |
-| Apps protegidos do ⌘Q e o tempo de espera | `Sources/Ilha/MediaKeys.swift` (`protectedApps`, `holdSeconds`) |
-| Atalho da área de transferência (⌥ X) | `Sources/Ilha/MediaKeys.swift` |
-| Quantidade de cópias e prazo de 24 h | `Sources/Ilha/ClipboardStore.swift` |
+| Lista de apps protegidos do ⌘Q | `Sources/Ilha/MediaKeys.swift` (`protectedApps`) |
 
 Para o YouTube Music: abra `music.youtube.com` no Safari e use **Arquivo → Adicionar ao Dock**, com o nome "YT Music".
 

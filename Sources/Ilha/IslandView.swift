@@ -7,6 +7,7 @@ enum IslandTab { case music, clipboard, energy, system }
 final class IslandState: ObservableObject {
     @Published var expanded = false
     @Published var tab = IslandTab.music
+    var openSettings: () -> Void = {}
     var expandedHeight: CGFloat {
         switch tab {
         case .music: return 128
@@ -238,6 +239,11 @@ struct IslandView: View {
                 HStack(spacing: 2) {
                     tabButton("cpu", .system)
                     tabButton("doc.on.clipboard", .clipboard)
+                    Button { state.openSettings() } label: {
+                        Image(systemName: "gearshape").font(.system(size: 13)).foregroundStyle(.white.opacity(0.35))
+                            .frame(width: 28, height: 22)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 18)
@@ -370,7 +376,7 @@ struct IslandView: View {
                 Text("Nada copiado ainda").font(.system(size: 12)).foregroundStyle(.white.opacity(0.4))
                 Spacer()
             } else {
-                ForEach(clipboard.items) { item in clipRow(item) }
+                ForEach(clipboard.items.prefix(5)) { item in clipRow(item) }
                 Spacer(minLength: 0)
             }
         }

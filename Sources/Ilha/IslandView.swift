@@ -223,40 +223,39 @@ struct IslandView: View {
     }
 
     private var expandedContainer: some View {
-        ZStack(alignment: .top) {
+        // Só cabe em cada lado do notch o que sobra da largura da ilha; o lado com mais ícones define o tamanho deles.
+        let side = (IslandLayout.expandedSize.width - state.notchWidth) / 2 - 14
+        let width = max(16, min(28, side / 3))
+        return ZStack(alignment: .top) {
             switch state.tab {
             case .music: expandedContent
             case .clipboard: clipboardContent
             case .energy: energyContent
             case .system: systemContent
             }
-            HStack {
-                HStack(spacing: 2) {
-                    tabButton("music.note", .music)
-                    tabButton("bolt.fill", .energy)
+            HStack(spacing: 0) {
+                tabButton("music.note", .music, width)
+                tabButton("bolt.fill", .energy, width)
+                Spacer(minLength: state.notchWidth + 8)
+                tabButton("cpu", .system, width)
+                tabButton("doc.on.clipboard", .clipboard, width)
+                Button { state.openSettings() } label: {
+                    Image(systemName: "gearshape").font(.system(size: 12)).foregroundStyle(.white.opacity(0.35))
+                        .frame(width: width, height: 22)
                 }
-                Spacer(minLength: state.notchWidth)
-                HStack(spacing: 2) {
-                    tabButton("cpu", .system)
-                    tabButton("doc.on.clipboard", .clipboard)
-                    Button { state.openSettings() } label: {
-                        Image(systemName: "gearshape").font(.system(size: 13)).foregroundStyle(.white.opacity(0.35))
-                            .frame(width: 28, height: 22)
-                    }
-                    .buttonStyle(.plain)
-                }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 18)
+            .padding(.horizontal, 14)
             .frame(height: state.notchHeight)
         }
     }
 
-    private func tabButton(_ symbol: String, _ tab: IslandTab) -> some View {
+    private func tabButton(_ symbol: String, _ tab: IslandTab, _ width: CGFloat) -> some View {
         Button { state.tab = tab } label: {
             Image(systemName: symbol)
-                .font(.system(size: 13))
+                .font(.system(size: 12))
                 .foregroundStyle(state.tab == tab ? .white : .white.opacity(0.35))
-                .frame(width: 28, height: 22)
+                .frame(width: width, height: 22)
         }
         .buttonStyle(.plain)
     }

@@ -15,6 +15,7 @@ final class Settings: ObservableObject {
     @Published var clipboardHours: Int { didSet { defaults.set(clipboardHours, forKey: "clipboardHours") } }
     @Published var quitHoldEnabled: Bool { didSet { defaults.set(quitHoldEnabled, forKey: "quitHoldEnabled") } }
     @Published var quitHoldSeconds: Double { didSet { defaults.set(quitHoldSeconds, forKey: "quitHoldSeconds") } }
+    @Published var protectedApps: [String] { didSet { defaults.set(protectedApps, forKey: "protectedApps") } }
     @Published var recording = false
     @Published var launchAtLogin: Bool
 
@@ -29,7 +30,31 @@ final class Settings: ObservableObject {
         clipboardHours = int("clipboardHours", 24)
         quitHoldEnabled = UserDefaults.standard.object(forKey: "quitHoldEnabled") as? Bool ?? true
         quitHoldSeconds = UserDefaults.standard.object(forKey: "quitHoldSeconds") as? Double ?? 1.2
+        protectedApps = UserDefaults.standard.stringArray(forKey: "protectedApps") ?? [
+            "com.anthropic.claudefordesktop", "com.apple.Terminal", "com.apple.Safari",
+            "com.anysphere.sand", "com.todesktop.230313mzl4w4u92"]
         launchAtLogin = SMAppService.mainApp.status == .enabled
+    }
+
+    func addProtectedApp() {
+        let panel = NSOpenPanel()
+        panel.title = "Escolha o app"
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.allowedContentTypes = [.application]
+        panel.allowsMultipleSelection = true
+        guard panel.runModal() == .OK else { return }
+        for url in panel.urls {
+            if let id = Bundle(url: url)?.bundleIdentifier, !protectedApps.contains(id) { protectedApps.append(id) }
+        }
+    }
+
+    func appName(_ bundleID: String) -> String {
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else { return bundleID }
+        return FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
+    }
+
+    func appIcon(_ bundleID: String) -> NSImage? {
+        NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID).map { NSWorkspace.shared.icon(forFile: $0.path) }
     }
 
     var shortcutDescription: String {
@@ -90,12 +115,28 @@ struct SettingsView: View {
                     .font(.footnote).foregroundStyle(.secondary)
             }
             group("Proteção do ⌘Q") {
-                Toggle("Segurar ⌘Q para fechar (Claude, Terminal, Safari, Grok Bot e Cursor)", isOn: $settings.quitHoldEnabled)
+                Toggle("Segurar ⌘Q para fechar os apps da lista", isOn: $settings.quitHoldEnabled)
                 HStack {
                     Text("Tempo: \(String(format: "%.1f", settings.quitHoldSeconds)) s")
                     Slider(value: $settings.quitHoldSeconds, in: 0.5...3, step: 0.1)
                 }
                 .disabled(!settings.quitHoldEnabled)
+                VStack(spacing: 4) {
+                    ForEach(settings.protectedApps, id: \.self) { id in
+                        HStack(spacing: 8) {
+                            if let icon = settings.appIcon(id) { Image(nsImage: icon).resizable().frame(width: 20, height: 20) }
+                            Text(settings.appName(id)).lineLimit(1)
+                            Spacer()
+                            Button { settings.protectedApps.removeAll { $0 == id } } label: { Image(systemName: "minus.circle") }
+                                .buttonStyle(.plain)
+                        }
+                    }
+                    if settings.protectedApps.isEmpty {
+                        Text("Nenhum app na lista.").font(.footnote).foregroundStyle(.secondary)
+                    }
+                }
+                Button("Adicionar app…") { settings.addProtectedApp() }
+                    .disabled(!settings.quitHoldEnabled)
             }
             group("Geral") {
                 Toggle("Abrir ao ligar o Mac", isOn: Binding(get: { settings.launchAtLogin }, set: { settings.setLaunchAtLogin($0) }))
@@ -104,7 +145,7 @@ struct SettingsView: View {
             Text("Ilha · github.com/lorhanbp/ilha").font(.footnote).foregroundStyle(.secondary)
         }
         .padding(22)
-        .frame(width: 460, height: 400)
+        .frame(width: 460, height: 520)
     }
 
     private func group<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {

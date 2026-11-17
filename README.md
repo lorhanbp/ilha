@@ -36,13 +36,13 @@ A ilha fica em volta da câmera. Fechada, mostra só o essencial; ao passar o mo
 - Experimental: a Ilha tenta esconder o aviso nativo de "Conectado" do Bluetooth.
 
 **Proteção do ⌘Q**
-- Em Claude, Terminal, Safari, Grok Bot e Cursor, o ⌘Q só fecha o app se você segurar por 1,2 s. Uma barrinha na ilha mostra o progresso. A lista de apps fica no código.
+- Nos apps que você escolher nos Ajustes (por padrão Claude, Terminal, Safari, Grok Bot e Cursor), o ⌘Q só fecha o app se você segurar por 1,2 s. Uma barrinha na ilha mostra o progresso.
 
 **Teclas de mídia**
 - Quando o macOS já soltou a sessão de música, o F8 deixa de abrir o Apple Music: a Ilha aperta o play do player configurado, sem trazê-lo pra frente. O F7 e o F9 não fazem nada nessa situação.
 
 **Ajustes**
-- Clique na engrenagem da ilha aberta (ou abra o app de novo) para mudar: o atalho da área de transferência (clique em Gravar e aperte as teclas), quantas cópias guardar e por quanto tempo, a proteção do ⌘Q (liga/desliga e o tempo) e abrir ao ligar o Mac.
+- Clique na engrenagem da ilha aberta (ou abra o app de novo) para mudar: o atalho da área de transferência (clique em Gravar e aperte as teclas), quantas cópias guardar e por quanto tempo, a proteção do ⌘Q (liga/desliga, o tempo e **quais apps** ficam protegidos: adicione ou remova da lista) e abrir ao ligar o Mac.
 
 ## Requisitos
 
@@ -73,7 +73,6 @@ O atalho, a quantidade de cópias, o prazo e a proteção do ⌘Q estão na jane
 | O quê | Onde |
 | --- | --- |
 | App do YouTube Music (web app do Safari) usado no F8 e nos botões | `Sources/Ilha/YTMusic.swift` (`appURL`) |
-| Lista de apps protegidos do ⌘Q | `Sources/Ilha/MediaKeys.swift` (`protectedApps`) |
 
 Para o YouTube Music: abra `music.youtube.com` no Safari e use **Arquivo → Adicionar ao Dock**, com o nome "YT Music".
 

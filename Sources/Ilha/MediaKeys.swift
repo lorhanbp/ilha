@@ -8,8 +8,6 @@ final class MediaKeys {
     private let hud: HUDModel
     private var quitHold: Task<Void, Never>?
     private var holdSeconds: Double { Settings.shared.quitHoldSeconds }
-    private let protectedApps: Set<String> = ["com.anthropic.claudefordesktop", "com.apple.Terminal", "com.apple.Safari",
-                                              "com.anysphere.sand", "com.todesktop.230313mzl4w4u92"]
     var onClipboardShortcut: () -> Void = {}
     var onKey: (Int64) -> Bool = { _ in false }
     private var tap: CFMachPort?
@@ -98,7 +96,7 @@ final class MediaKeys {
                 return pass
             }
             if Settings.shared.quitHoldEnabled, code == 12, flags.contains(.maskCommand), flags.isDisjoint(with: [.maskAlternate, .maskControl, .maskShift]),
-               let app = NSWorkspace.shared.frontmostApplication, protectedApps.contains(app.bundleIdentifier ?? "") {
+               let app = NSWorkspace.shared.frontmostApplication, Settings.shared.protectedApps.contains(app.bundleIdentifier ?? "") {
                 if !repeating { startQuit(app) }
                 return nil
             }

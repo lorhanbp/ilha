@@ -12,6 +12,12 @@
 
 *English: a Dynamic Island for the MacBook notch: now playing with album art and equalizer, volume/brightness HUD, clipboard history with a paste-in-place picker, battery and system stats. Native Swift, no dependencies, MIT.*
 
+## Demonstração
+
+[![Ilha em ação](docs/demo.gif)](docs/demo.mp4)
+
+Vídeo completo: docs/demo.mp4
+
 ## O que faz
 
 A ilha fica em volta da câmera. Fechada, mostra só o essencial; ao passar o mouse, ela abre e aparecem, uma de cada lado, as bolinhas das abas (música, energia, sistema e prancheta) e a das configurações.

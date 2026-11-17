@@ -84,10 +84,6 @@ A Ilha usa APIs **privadas** do macOS (MediaRemote para a música, DisplayServic
 - O YouTube Music no Safari **não aceita** pular para um ponto pelo macOS. A barra de progresso e os botões de ±10 s funcionam mandando as teclas J e L do player. Para isso a janela do web app é escondida no canto de baixo à esquerda da tela. Clique na capa da ilha aberta para trazê-la de volta.
 - O macOS solta a sessão de música alguns segundos depois da pausa, então a ilha guarda a última faixa por conta própria.
 
-## Feito com ajuda de IA
-
-Este projeto foi desenvolvido com o Claude Code (Anthropic). O código foi revisado e testado no Mac do autor, e pode ter arestas em outros modelos.
-
 ## Licença
 
 [MIT](LICENSE)

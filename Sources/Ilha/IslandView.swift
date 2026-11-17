@@ -27,9 +27,12 @@ final class IslandState: ObservableObject {
 
 enum IslandLayout {
     static let expandedSize = CGSize(width: 340, height: 210)
+    /// Espaço extra de cada lado para as bolinhas de abas e ajustes.
+    static let sideWidth: CGFloat = 44
+    static var panelSize: CGSize { CGSize(width: expandedSize.width + sideWidth * 2, height: expandedSize.height) }
 
-    static func wing(hasTrack: Bool, hud: Bool) -> CGFloat {
-        if hud { return 74 }
+    static func wing(hasTrack: Bool, hud: Bool, hudWing: CGFloat = 74) -> CGFloat {
+        if hud { return hudWing }
         return hasTrack ? 38 : 0
     }
 }
@@ -120,7 +123,15 @@ struct IslandView: View {
     @ObservedObject var accessories: AccessoryMonitor
     @ObservedObject var system: SystemMonitor
     var body: some View {
-        let wing = IslandLayout.wing(hasTrack: music.hasTrack, hud: hud.visible)
+        ZStack(alignment: .top) {
+            island
+            if state.expanded { bubbles }
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: state.expanded)
+    }
+
+    @ViewBuilder private var island: some View {
+        let wing = IslandLayout.wing(hasTrack: music.hasTrack, hud: hud.visible, hudWing: hud.wing)
         let width = state.expanded ? IslandLayout.expandedSize.width : state.notchWidth + wing * 2
         let height = state.expanded ? state.expandedHeight : state.notchHeight
         let radius: CGFloat = state.expanded ? 22 : 14
@@ -223,39 +234,47 @@ struct IslandView: View {
     }
 
     private var expandedContainer: some View {
-        // Só cabe em cada lado do notch o que sobra da largura da ilha; o lado com mais ícones define o tamanho deles.
-        let side = (IslandLayout.expandedSize.width - state.notchWidth) / 2 - 14
-        let width = max(16, min(28, side / 3))
-        return ZStack(alignment: .top) {
+        ZStack(alignment: .top) {
             switch state.tab {
             case .music: expandedContent
             case .clipboard: clipboardContent
             case .energy: energyContent
             case .system: systemContent
             }
-            HStack(spacing: 0) {
-                tabButton("music.note", .music, width)
-                tabButton("bolt.fill", .energy, width)
-                Spacer(minLength: state.notchWidth + 8)
-                tabButton("cpu", .system, width)
-                tabButton("doc.on.clipboard", .clipboard, width)
-                Button { state.openSettings() } label: {
-                    Image(systemName: "gearshape").font(.system(size: 12)).foregroundStyle(.white.opacity(0.35))
-                        .frame(width: width, height: 22)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 14)
-            .frame(height: state.notchHeight)
         }
     }
 
-    private func tabButton(_ symbol: String, _ tab: IslandTab, _ width: CGFloat) -> some View {
-        Button { state.tab = tab } label: {
-            Image(systemName: symbol)
-                .font(.system(size: 12))
-                .foregroundStyle(state.tab == tab ? .white : .white.opacity(0.35))
-                .frame(width: width, height: 22)
+    /// Abas e ajustes como bolinhas do lado de fora da ilha.
+    private var bubbles: some View {
+        HStack(alignment: .top) {
+            VStack(spacing: 6) {
+                bubble("music.note", tab: .music)
+                bubble("bolt.fill", tab: .energy)
+            }
+            Spacer()
+            VStack(spacing: 6) {
+                bubble("cpu", tab: .system)
+                bubble("doc.on.clipboard", tab: .clipboard)
+                bubble("gearshape", tab: nil)
+            }
+        }
+        .padding(.horizontal, 6)
+        .padding(.top, 8)
+        .transition(.scale(scale: 0.6).combined(with: .opacity))
+    }
+
+    private func bubble(_ symbol: String, tab: IslandTab?) -> some View {
+        let active = tab != nil && state.tab == tab
+        return Button {
+            if let tab { state.tab = tab } else { state.openSettings() }
+        } label: {
+            ZStack {
+                VisualEffect().clipShape(Circle())
+                Circle().fill(.black.opacity(0.35))
+                if active { Circle().fill(.white.opacity(0.22)) }
+                Image(systemName: symbol).font(.system(size: 12)).foregroundStyle(.white.opacity(active ? 1 : 0.7))
+            }
+            .frame(width: 30, height: 30)
         }
         .buttonStyle(.plain)
     }

@@ -16,6 +16,7 @@ final class Settings: ObservableObject {
     @Published var quitHoldEnabled: Bool { didSet { defaults.set(quitHoldEnabled, forKey: "quitHoldEnabled") } }
     @Published var quitHoldSeconds: Double { didSet { defaults.set(quitHoldSeconds, forKey: "quitHoldSeconds") } }
     @Published var protectedApps: [String] { didSet { defaults.set(protectedApps, forKey: "protectedApps") } }
+    @Published var favoritePlayerPath: String { didSet { defaults.set(favoritePlayerPath, forKey: "favoritePlayerPath") } }
     @Published var recording = false
     @Published var launchAtLogin: Bool
 
@@ -33,7 +34,31 @@ final class Settings: ObservableObject {
         protectedApps = UserDefaults.standard.stringArray(forKey: "protectedApps") ?? [
             "com.anthropic.claudefordesktop", "com.apple.Terminal", "com.apple.Safari",
             "com.anysphere.sand", "com.todesktop.230313mzl4w4u92"]
+        let saved = UserDefaults.standard.string(forKey: "favoritePlayerPath")
+        favoritePlayerPath = saved ?? (FileManager.default.fileExists(atPath: YTMusic.defaultPath) ? YTMusic.defaultPath : "")
         launchAtLogin = SMAppService.mainApp.status == .enabled
+    }
+
+    /// Players que a Ilha sabe retomar e que estão instalados.
+    var playerCandidates: [String] {
+        var paths = ["/Applications/Spotify.app", "/System/Applications/Music.app", "/Applications/Music.app"]
+        let user = NSHomeDirectory() + "/Applications"
+        for name in (try? FileManager.default.contentsOfDirectory(atPath: user)) ?? [] where name.hasSuffix(".app") {
+            if Bundle(path: user + "/" + name)?.bundleIdentifier?.hasPrefix("com.apple.Safari.WebApp") == true { paths.append(user + "/" + name) }
+        }
+        return paths.filter { FileManager.default.fileExists(atPath: $0) }
+    }
+
+    func choosePlayer() {
+        let panel = NSOpenPanel()
+        panel.title = "Escolha o app de música"
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.allowedContentTypes = [.application]
+        if panel.runModal() == .OK, let url = panel.url { favoritePlayerPath = url.path }
+    }
+
+    func playerName(_ path: String) -> String {
+        path.isEmpty ? "Nenhum" : FileManager.default.displayName(atPath: path).replacingOccurrences(of: ".app", with: "")
     }
 
     func addProtectedApp() {
@@ -114,6 +139,27 @@ struct SettingsView: View {
                 Text("Com o atalho, o seletor abre junto do mouse. Escolha com os números, as setas e Return, ou clique: o item é colado no app em foco.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
+            group("Música") {
+                HStack {
+                    Text("App favorito")
+                    Spacer()
+                    if !settings.favoritePlayerPath.isEmpty {
+                        Image(nsImage: NSWorkspace.shared.icon(forFile: settings.favoritePlayerPath)).resizable().frame(width: 20, height: 20)
+                    }
+                    Text(settings.playerName(settings.favoritePlayerPath))
+                    Menu("Escolher") {
+                        ForEach(settings.playerCandidates, id: \.self) { path in
+                            Button(settings.playerName(path)) { settings.favoritePlayerPath = path }
+                        }
+                        Divider()
+                        Button("Outro…") { settings.choosePlayer() }
+                        Button("Nenhum") { settings.favoritePlayerPath = "" }
+                    }
+                    .fixedSize()
+                }
+                Text("É o app que o F8 retoma quando o macOS esquece o player. Spotify e Música voltam a tocar por AppleScript (o macOS pede permissão na primeira vez); o web app do YouTube Music é controlado pela Acessibilidade.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
             group("Proteção do ⌘Q") {
                 Toggle("Segurar ⌘Q para fechar os apps da lista", isOn: $settings.quitHoldEnabled)
                 HStack {
@@ -145,7 +191,7 @@ struct SettingsView: View {
             Text("Ilha · github.com/lorhanbp/ilha").font(.footnote).foregroundStyle(.secondary)
         }
         .padding(22)
-        .frame(width: 460, height: 520)
+        .frame(width: 460, height: 610)
     }
 
     private func group<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {

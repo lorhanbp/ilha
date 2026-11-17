@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 @MainActor
@@ -19,6 +20,13 @@ final class HUDModel: ObservableObject {
 
     func showAccessory(symbol: String, text: String) {
         present(.accessory, level: 0, muted: false, symbol: symbol, text: text, seconds: 3)
+    }
+
+    /// Largura de cada lado do notch enquanto o aviso está na tela: o texto longo ("Desconectado") não pode entrar atrás do notch.
+    var wing: CGFloat {
+        guard kind == .accessory else { return 74 }
+        let width = (text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 10.5, weight: .semibold)]).width
+        return max(74, ceil(width) + 26)
     }
 
     func showBattery(percent: Int, charging: Bool) {

@@ -113,7 +113,7 @@ final class MediaKeys {
         switch code {
         case 16...20:
             log("tecla \(code) down=\(down) sessionLive=\(music.sessionLive)")
-            guard !music.sessionLive else { return pass }
+            guard !music.sessionLive, YTMusic.exists, YTMusic.bundleID != "com.apple.Music" else { return pass }
             if down && code == 16 { Task.detached { await YTMusic.resume() } }
             return nil
         case 0, 1, 7:

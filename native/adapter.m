@@ -3,6 +3,8 @@
 typedef void (*InfoFn)(dispatch_queue_t, void (^)(NSDictionary *));
 typedef void (*PlayFn)(dispatch_queue_t, void (^)(BOOL));
 typedef BOOL (*CmdFn)(uint32_t, NSDictionary *);
+typedef void (*ClientFn)(dispatch_queue_t, void (^)(id));
+typedef NSString *(*BundleFn)(id);
 
 static void *mr(void) {
     return dlopen("/System/Library/PrivateFrameworks/MediaRemote.framework/MediaRemote", RTLD_NOW);
@@ -19,6 +21,18 @@ static void emit(BOOL withArt) {
     if (!getInfo) { puts("{}"); return; }
     __block BOOL playing = NO;
     __block NSDictionary *info = nil;
+    __block NSString *app = nil;
+    ClientFn getClient = (ClientFn)dlsym(h, "MRMediaRemoteGetNowPlayingClient");
+    BundleFn bundleOf = (BundleFn)dlsym(h, "MRNowPlayingClientGetBundleIdentifier");
+    BundleFn parentOf = (BundleFn)dlsym(h, "MRNowPlayingClientGetParentAppBundleIdentifier");
+    dispatch_semaphore_t c = dispatch_semaphore_create(0);
+    if (getClient && bundleOf) {
+        getClient(dispatch_get_global_queue(0, 0), ^(id client) {
+            if (client) app = bundleOf(client) ?: (parentOf ? parentOf(client) : nil);
+            dispatch_semaphore_signal(c);
+        });
+        dispatch_semaphore_wait(c, dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC));
+    }
     dispatch_semaphore_t a = dispatch_semaphore_create(0), b = dispatch_semaphore_create(0);
     if (getPlaying) getPlaying(dispatch_get_global_queue(0, 0), ^(BOOL p) { playing = p; dispatch_semaphore_signal(a); });
     else dispatch_semaphore_signal(a);
@@ -43,6 +57,7 @@ static void emit(BOOL withArt) {
         NSData *art = info[@"kMRMediaRemoteNowPlayingInfoArtworkData"];
         if ([art isKindOfClass:[NSData class]]) { o[@"artwork"] = [art base64EncodedStringWithOptions:0]; artSent = YES; }
     }
+    if (app) o[@"app"] = app;
     o[@"playing"] = @(playing);
     NSData *d = [NSJSONSerialization dataWithJSONObject:o options:0 error:nil];
     fwrite(d.bytes, 1, d.length, stdout);
@@ -58,6 +73,14 @@ static void command(uint32_t c) {
 
 void ilha_get(void *cv) { emit(NO); }
 void ilha_getart(void *cv) { emit(YES); }
+void ilha_seek(void *cv) {
+    void *h = mr();
+    typedef void (*SeekFn)(double);
+    SeekFn seek = h ? (SeekFn)dlsym(h, "MRMediaRemoteSetElapsedTime") : NULL;
+    const char *value = getenv("ILHA_SEEK");
+    if (seek && value) seek(atof(value));
+}
+
 void ilha_toggle(void *cv) { command(2); }
 void ilha_next(void *cv) { command(4); }
 void ilha_prev(void *cv) { command(5); }

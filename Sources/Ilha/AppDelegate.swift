@@ -31,7 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         state = IslandState(notchWidth: notchWidth, notchHeight: notchHeight)
         state.openSettings = { [weak self] in self?.showSettings() }
 
-        let size = IslandLayout.expandedSize
+        let size = IslandLayout.panelSize
         let frame = NSRect(x: screen.frame.midX - size.width / 2, y: screen.frame.maxY - size.height,
                            width: size.width, height: size.height)
         panel = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel],
@@ -70,7 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func showSettings() {
         if settingsWindow == nil {
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 520),
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 610),
                                   styleMask: [.titled, .closable], backing: .buffered, defer: false)
             window.title = "Ajustes da Ilha"
             window.isReleasedWhenClosed = false
@@ -92,14 +92,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let mouse = NSEvent.mouseLocation
         let screenFrame = panel.frame
         let top = screenFrame.maxY
-        let compactWidth = state.notchWidth + IslandLayout.wing(hasTrack: music.hasTrack, hud: hud.visible) * 2
+        let compactWidth = state.notchWidth + IslandLayout.wing(hasTrack: music.hasTrack, hud: hud.visible, hudWing: hud.wing) * 2
         // O mouse na borda de cima fica em y == maxY, que o NSRect.contains não conta: estende pra cima.
         let hover = NSRect(x: screenFrame.midX - compactWidth / 2, y: top - state.notchHeight - 2,
                            width: compactWidth, height: state.notchHeight + 60)
         if state.expanded {
-            let visible = NSRect(x: panel.frame.midX - IslandLayout.expandedSize.width / 2,
+            let visible = NSRect(x: panel.frame.midX - IslandLayout.panelSize.width / 2,
                                  y: panel.frame.maxY - state.expandedHeight,
-                                 width: IslandLayout.expandedSize.width, height: state.expandedHeight + 60)
+                                 width: IslandLayout.panelSize.width, height: state.expandedHeight + 60)
             if !visible.contains(mouse) { state.expanded = false }
         } else if hover.contains(mouse) {
             state.expanded = true

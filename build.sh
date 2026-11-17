@@ -19,6 +19,7 @@ cat > "$APP/Contents/Info.plist" <<'P'
 <key>CFBundleShortVersionString</key><string>0.1</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>LSUIElement</key><true/>
+<key>NSAppleEventsUsageDescription</key><string>A Ilha usa isto para retomar o Spotify ou o app Música.</string>
 </dict></plist>
 P
 codesign --force --sign "Ilha Dev" "$APP" 2>/dev/null || codesign --force --sign - "$APP"

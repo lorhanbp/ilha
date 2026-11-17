@@ -20,6 +20,7 @@ final class MusicModel: ObservableObject {
 
     /// Falso quando o macOS soltou a sessão de reprodução.
     private(set) var sessionLive = false
+    private var playerApp = ""
 
     private let library: String
     private let script: String
@@ -34,12 +35,22 @@ final class MusicModel: ObservableObject {
     }
 
     /// Arrastar a barra: pula a diferença em passos de 10 s e já mostra a nova posição.
+    /// O web app do YouTube Music (Safari) aparece como WebKit; sem sessão, o único player que a Ilha sabe retomar é ele.
+    private var controlsWebPlayer: Bool {
+        playerApp.isEmpty || playerApp.hasPrefix("com.apple.WebKit") || playerApp.hasPrefix("com.apple.Safari")
+    }
+
     func seek(to seconds: Double) {
         let delta = seconds - position()
         elapsedBase = seconds
         sampledAt = Date()
         objectWillChange.send()
-        Task.detached { await YTMusic.seek(by: delta) }
+        if controlsWebPlayer {
+            Task.detached { await YTMusic.seek(by: delta) }
+        } else {
+            let (script, library) = (script, library)
+            DispatchQueue.global().async { Self.run(script, library, "seek", seconds: seconds) }
+        }
     }
 
     func showPlayerWindow() {
@@ -53,9 +64,12 @@ final class MusicModel: ObservableObject {
         }
         if command == "toggle" { playing.toggle() }
         let (script, library) = (script, library)
+        let web = controlsWebPlayer
         DispatchQueue.global().async {
-            if YTMusic.control(command) { return }
-            if command == "toggle" { Task { await YTMusic.resume() } }
+            if web {
+                if YTMusic.control(command) { return }
+                if command == "toggle" { Task { await YTMusic.resume() } }
+            }
             Self.run(script, library, command)
         }
     }
@@ -92,6 +106,7 @@ final class MusicModel: ObservableObject {
     private func apply(_ data: Data) {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
         playing = json["playing"] as? Bool ?? false
+        playerApp = json["app"] as? String ?? ""
         if let art = json["artwork"] as? String, let bytes = Data(base64Encoded: art), let image = NSImage(data: bytes) {
             cover = image
         }
@@ -107,12 +122,13 @@ final class MusicModel: ObservableObject {
     }
 
     @discardableResult
-    nonisolated private static func run(_ script: String, _ library: String, _ mode: String) -> Data? {
+    nonisolated private static func run(_ script: String, _ library: String, _ mode: String, seconds: Double? = nil) -> Data? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/perl")
         process.arguments = [script, library, mode]
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
+        if let seconds { process.environment = ["ILHA_SEEK": String(seconds)] }
         do { try process.run() } catch { return nil }
         process.waitUntilExit()
         return nil

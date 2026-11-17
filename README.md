@@ -1,12 +1,18 @@
 # Ilha
 
-Uma "ilha dinâmica" para o notch do MacBook, feita em Swift. Ela fica em volta da câmera e mostra só o que importa: música, volume e brilho, área de transferência, energia e uso do sistema.
+**Uma Dynamic Island para o notch do MacBook.** A Ilha vive em volta da câmera e mostra o que você usa o tempo todo: a música que está tocando, o volume e o brilho, o histórico do que você copiou, a bateria e a saúde do Mac. Tudo num só lugar, leve e sem ícone na barra de menus.
 
-*English: a small Dynamic Island for the MacBook notch (music, volume/brightness HUD, clipboard history, battery/energy and system stats). Open source, MIT.*
+- Capa do álbum e equalizador ao lado do notch; passe o mouse e ela abre com os controles.
+- Indicador de volume e brilho na própria ilha, no lugar do HUD do macOS.
+- Área de transferência com atalho e seletor junto do mouse, que já cola o item escolhido.
+- Bateria em anéis, consumo em watts, CPU, RAM, GPU, SSD e temperatura.
+- Código aberto, em Swift puro, sem dependências.
+
+*English: a Dynamic Island for the MacBook notch: now playing with album art and equalizer, volume/brightness HUD, clipboard history with a paste-in-place picker, battery and system stats. Native Swift, no dependencies, MIT.*
 
 ## O que faz
 
-A ilha fica em volta da câmera. Fechada, mostra só o essencial; ao passar o mouse, ela abre com quatro abas e um botão de ajustes.
+A ilha fica em volta da câmera. Fechada, mostra só o essencial; ao passar o mouse, ela abre e aparecem, uma de cada lado, as bolinhas das abas (música, energia, sistema e prancheta) e a das configurações.
 
 **Música** (aba da nota musical)
 - Fechada: capa do álbum à esquerda e equalizador à direita do notch. O equalizador anima enquanto toca e fica parado, com as cinco barras iguais, quando pausa.
@@ -39,10 +45,10 @@ A ilha fica em volta da câmera. Fechada, mostra só o essencial; ao passar o mo
 - Nos apps que você escolher nos Ajustes (por padrão Claude, Terminal, Safari, Grok Bot e Cursor), o ⌘Q só fecha o app se você segurar por 1,2 s. Uma barrinha na ilha mostra o progresso.
 
 **Teclas de mídia**
-- Quando o macOS já soltou a sessão de música, o F8 deixa de abrir o Apple Music: a Ilha aperta o play do player configurado, sem trazê-lo pra frente. O F7 e o F9 não fazem nada nessa situação.
+- Quando o macOS já soltou a sessão de música, o F8 deixa de abrir o Apple Music: a Ilha dá play no seu app favorito (nos Ajustes), sem trazê-lo pra frente quando é o web app do YouTube Music. O F7 e o F9 não fazem nada nessa situação.
 
 **Ajustes**
-- Clique na engrenagem da ilha aberta (ou abra o app de novo) para mudar: o atalho da área de transferência (clique em Gravar e aperte as teclas), quantas cópias guardar e por quanto tempo, a proteção do ⌘Q (liga/desliga, o tempo e **quais apps** ficam protegidos: adicione ou remova da lista) e abrir ao ligar o Mac.
+- Clique na bolinha da engrenagem da ilha aberta (ou abra o app de novo) para mudar: o app de música favorito, o atalho da área de transferência (clique em Gravar e aperte as teclas), quantas cópias guardar e por quanto tempo, a proteção do ⌘Q (liga/desliga, o tempo e **quais apps** ficam protegidos: adicione ou remova da lista) e abrir ao ligar o Mac.
 
 ## Requisitos
 

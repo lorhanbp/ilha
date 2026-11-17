@@ -1,9 +1,15 @@
 import AppKit
 import ApplicationServices
 
-/// Controla o web app do YouTube Music pela Acessibilidade, sem trazê-lo pra frente.
+/// Player favorito: o web app do YouTube Music é controlado pela Acessibilidade, sem trazê-lo pra frente; Spotify e Música, por AppleScript.
 enum YTMusic {
-    static let appURL = URL(fileURLWithPath: NSHomeDirectory() + "/Applications/YT Music.app")
+    static let defaultPath = NSHomeDirectory() + "/Applications/YT Music.app"
+    static var appURL: URL {
+        URL(fileURLWithPath: UserDefaults.standard.string(forKey: "favoritePlayerPath") ?? defaultPath)
+    }
+    static var bundleID: String? { Bundle(url: appURL)?.bundleIdentifier }
+    static var exists: Bool { FileManager.default.fileExists(atPath: appURL.path) }
+    private static var isWebApp: Bool { bundleID?.hasPrefix("com.apple.Safari.WebApp") == true }
     private static let playTitles: Set<String> = ["Tocar", "Reproduzir", "Play"]
     private static let titles: [String: Set<String>] = [
         "toggle": ["Tocar", "Pausar", "Reproduzir", "Play", "Pause"],
@@ -21,6 +27,17 @@ enum YTMusic {
 
     /// Abre o web app em segundo plano, se preciso, e aperta o botão de tocar.
     static func resume() async {
+        guard exists else { return }
+        if !isWebApp {
+            if let id = bundleID, ["com.spotify.client", "com.apple.Music"].contains(id) {
+                NSAppleScript(source: "tell application id \"\(id)\" to play")?.executeAndReturnError(nil)
+            } else {
+                let configuration = NSWorkspace.OpenConfiguration()
+                configuration.activates = false
+                _ = try? await NSWorkspace.shared.openApplication(at: appURL, configuration: configuration)
+            }
+            return
+        }
         if runningPID() == nil {
             let configuration = NSWorkspace.OpenConfiguration()
             configuration.activates = false

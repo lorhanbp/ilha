@@ -1,4 +1,6 @@
-# Ilha
+<p align="center"><img src="assets/logo.png" width="160" alt="Logo da Ilha"></p>
+
+<h1 align="center">Ilha</h1>
 
 **Uma Dynamic Island para o notch do MacBook.** A Ilha vive em volta da câmera e mostra o que você usa o tempo todo: a música que está tocando, o volume e o brilho, o histórico do que você copiou, a bateria e a saúde do Mac. Tudo num só lugar, leve e sem ícone na barra de menus.
 

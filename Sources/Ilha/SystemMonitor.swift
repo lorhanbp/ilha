@@ -29,10 +29,22 @@ final class SystemMonitor: ObservableObject {
         hidClient = hidClientCreate(kCFAllocatorDefault)?.takeRetainedValue()
         if let hidClient { hidSetMatching(hidClient, ["PrimaryUsagePage": 0xff00, "PrimaryUsage": 5] as CFDictionary) }
         refresh()
-        Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
+    }
+
+    /// Só lê os sensores enquanto a ilha está aberta: é o único momento em que alguém vê os números.
+    var active = false {
+        didSet {
+            guard active != oldValue else { return }
+            timer?.invalidate()
+            timer = nil
+            guard active else { return }
+            refresh()
+            timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+                Task { @MainActor in self?.refresh() }
+            }
         }
     }
+    private var timer: Timer?
 
     private func refresh() {
         readCPU()

@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let energy = EnergyModel()
     private let accessories = AccessoryMonitor()
     private let system = SystemMonitor()
+    private var statusIcon: StatusIcon?
     private lazy var picker = ClipboardPicker(store: clipboard)
     private lazy var mediaKeys = MediaKeys(music: music, hud: hud)
 
@@ -47,6 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.orderFrontRegardless()
         mediaKeys.onClipboardShortcut = { [weak self] in self?.picker.toggle() }
         mediaKeys.onKey = { [weak self] code in self?.picker.handleKey(code) ?? false }
+        accessories.onHardwareChange = { [weak self] in self?.popupGuard.burst() }
         accessories.onAnnounce = { [weak self] device, connected in
             let text = connected ? (device.battery ?? "Conectado") : "Desconectado"
             self?.hud.showAccessory(symbol: device.symbol, text: text)
@@ -60,11 +62,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if Bundle.main.bundlePath.hasPrefix("/Applications"), SMAppService.mainApp.status != .enabled {
             try? SMAppService.mainApp.register()
         }
+        statusIcon = StatusIcon { [weak self] in self?.showSettings() }
+        state.$expanded.removeDuplicates().sink { [weak self] open in self?.system.active = open; self?.energy.active = open }.store(in: &subscriptions)
+        popupGuard.onPopupOpened = { [weak self] in self?.hud.hold() }
+        popupGuard.onPopupClosed = { [weak self] in self?.hud.release() }
+        popupGuard.watch()
         mediaKeys.start()
-        popupGuard.start()
 
-        Timer.scheduledTimer(withTimeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.mouseMoved() }
+        NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] _ in
+            MainActor.assumeIsolated { self?.mouseMoved() }
+        }
+        NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] event in
+            MainActor.assumeIsolated { self?.mouseMoved() }
+            return event
         }
     }
 

@@ -33,7 +33,7 @@ final class ClipboardStore: ObservableObject {
             items = saved
         }
         purge()
-        Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { [weak self] _ in
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.poll() }
         }
         Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in

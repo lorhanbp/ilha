@@ -39,6 +39,30 @@ final class HUDModel: ObservableObject {
         present(.quit, level: 0, muted: false, symbol: "", text: "", seconds: seconds + 1)
     }
 
+    private var holding = false
+
+    /// O aviso do macOS (escondido) ainda estaria aberto: a ilha segura o aviso de acessório até ele fechar.
+    func hold() {
+        holding = true
+        guard visible, kind == .accessory else { return }
+        keepUntil(seconds: 8)
+    }
+
+    /// O macOS fechou o aviso: a ilha espera mais 2 segundos e fecha.
+    func release() {
+        holding = false
+        guard visible, kind == .accessory else { return }
+        keepUntil(seconds: 2)
+    }
+
+    private func keepUntil(seconds: Double) {
+        hideTask?.cancel()
+        hideTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            if !Task.isCancelled { self?.visible = false }
+        }
+    }
+
     func hide() {
         hideTask?.cancel()
         visible = false
@@ -52,10 +76,6 @@ final class HUDModel: ObservableObject {
         self.text = text
         visible = true
         objectWillChange.send()
-        hideTask?.cancel()
-        hideTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            if !Task.isCancelled { self?.visible = false }
-        }
+        keepUntil(seconds: kind == .accessory && holding ? 8 : seconds)
     }
 }

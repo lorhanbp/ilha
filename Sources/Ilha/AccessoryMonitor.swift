@@ -29,13 +29,43 @@ final class AccessoryMonitor: ObservableObject {
     private var fastLoaded = false
     private var slowLoaded = false
 
+    /// Chamado na hora em que o macOS avisa que um aparelho USB, HID ou Bluetooth apareceu ou sumiu.
+    var onHardwareChange: () -> Void = {}
+
+    private func watchHardware() {
+        guard let port = IONotificationPortCreate(kIOMainPortDefault) else { return }
+        CFRunLoopAddSource(CFRunLoopGetMain(), IONotificationPortGetRunLoopSource(port).takeUnretainedValue(), .commonModes)
+        let context = Unmanaged.passUnretained(self).toOpaque()
+        let callback: IOServiceMatchingCallback = { context, iterator in
+            var fresh = false
+            while case let service = IOIteratorNext(iterator), service != 0 { IOObjectRelease(service); fresh = true }
+            guard fresh, let context else { return }
+            let monitor = Unmanaged<AccessoryMonitor>.fromOpaque(context).takeUnretainedValue()
+            DispatchQueue.main.async { MainActor.assumeIsolated { monitor.hardwareChanged() } }
+        }
+        for name in ["IOUSBHostDevice", "IOHIDDevice", "IOBluetoothDevice"] {
+            for type in [kIOFirstMatchNotification, kIOTerminatedNotification] {
+                var iterator: io_iterator_t = 0
+                guard IOServiceAddMatchingNotification(port, type, IOServiceMatching(name), callback, context, &iterator) == KERN_SUCCESS else { continue }
+                while case let service = IOIteratorNext(iterator), service != 0 { IOObjectRelease(service) }
+            }
+        }
+    }
+
+    private func hardwareChanged() {
+        onHardwareChange()
+        pollFast()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in self?.pollFast(); self?.pollSlow() }
+    }
+
     init() {
+        watchHardware()
         pollSlow()
         pollFast()
-        Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
+        Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.pollSlow() }
         }
-        Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+        Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.pollFast() }
         }
     }

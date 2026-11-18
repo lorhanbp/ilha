@@ -1,5 +1,6 @@
 import Foundation
 import IOKit
+import IOKit.ps
 
 /// Bateria e energia lidas do AppleSmartBattery.
 @MainActor
@@ -17,10 +18,28 @@ final class EnergyModel: ObservableObject {
 
     init() {
         refresh()
-        Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
+        let source = IOPSNotificationCreateRunLoopSource({ context in
+            guard let context else { return }
+            let model = Unmanaged<EnergyModel>.fromOpaque(context).takeUnretainedValue()
+            DispatchQueue.main.async { MainActor.assumeIsolated { model.refresh() } }
+        }, Unmanaged.passUnretained(self).toOpaque()).takeRetainedValue()
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+    }
+
+    /// Porcentagem e tomada chegam por aviso do macOS; watts e tempo restante só são lidos com a ilha aberta.
+    var active = false {
+        didSet {
+            guard active != oldValue else { return }
+            timer?.invalidate()
+            timer = nil
+            guard active else { return }
+            refresh()
+            timer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
+                Task { @MainActor in self?.refresh() }
+            }
         }
     }
+    private var timer: Timer?
 
     private func number(_ value: Any?) -> Double? { (value as? NSNumber)?.doubleValue }
 

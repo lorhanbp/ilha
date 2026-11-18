@@ -17,6 +17,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let accessories = AccessoryMonitor()
     private let system = SystemMonitor()
     private var statusIcon: StatusIcon?
+    private let trigger = HoverTrigger()
+    private var leaveTimer: Timer?
     private lazy var picker = ClipboardPicker(store: clipboard)
     private lazy var mediaKeys = MediaKeys(music: music, hud: hud)
 
@@ -69,12 +71,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popupGuard.watch()
         mediaKeys.start()
 
-        NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] _ in
-            MainActor.assumeIsolated { self?.mouseMoved() }
-        }
-        NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] event in
-            MainActor.assumeIsolated { self?.mouseMoved() }
-            return event
+        trigger.onEnter = { [weak self] in self?.state.expanded = true }
+        positionTrigger()
+        trigger.orderFrontRegardless()
+        music.objectWillChange.merge(with: hud.objectWillChange).sink { [weak self] _ in
+            DispatchQueue.main.async { self?.positionTrigger() }
+        }.store(in: &subscriptions)
+        state.$expanded.removeDuplicates().sink { [weak self] open in self?.expandedChanged(open) }.store(in: &subscriptions)
+    }
+
+    /// Faixa invisível sobre a ilha fechada: o macOS só avisa quando o mouse entra, sem ninguém ficar lendo a posição dele.
+    private func positionTrigger() {
+        let wing = IslandLayout.wing(hasTrack: music.hasTrack, hud: hud.visible, hudWing: hud.wing)
+        let width = state.notchWidth + wing * 2
+        // Estende 2 pt abaixo e vai até a borda de cima, onde o mouse encosta em y == maxY.
+        trigger.setFrame(NSRect(x: panel.frame.midX - width / 2, y: panel.frame.maxY - state.notchHeight - 2,
+                                width: width, height: state.notchHeight + 2), display: false)
+    }
+
+    private func expandedChanged(_ open: Bool) {
+        panel.ignoresMouseEvents = !open
+        trigger.ignoresMouseEvents = open
+        leaveTimer?.invalidate()
+        leaveTimer = nil
+        guard open else { return }
+        // Só enquanto a ilha está aberta: confere se o mouse saiu dela.
+        leaveTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.checkMouseLeft() }
         }
     }
 
@@ -97,22 +120,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
-    private func mouseMoved() {
-        panel.ignoresMouseEvents = !state.expanded
-        let mouse = NSEvent.mouseLocation
-        let screenFrame = panel.frame
-        let top = screenFrame.maxY
-        let compactWidth = state.notchWidth + IslandLayout.wing(hasTrack: music.hasTrack, hud: hud.visible, hudWing: hud.wing) * 2
-        // O mouse na borda de cima fica em y == maxY, que o NSRect.contains não conta: estende pra cima.
-        let hover = NSRect(x: screenFrame.midX - compactWidth / 2, y: top - state.notchHeight - 2,
-                           width: compactWidth, height: state.notchHeight + 60)
-        if state.expanded {
-            let visible = NSRect(x: panel.frame.midX - IslandLayout.panelSize.width / 2,
-                                 y: panel.frame.maxY - state.expandedHeight,
-                                 width: IslandLayout.panelSize.width, height: state.expandedHeight + 60)
-            if !visible.contains(mouse) { state.expanded = false }
-        } else if hover.contains(mouse) {
-            state.expanded = true
-        }
+    private func checkMouseLeft() {
+        let visible = NSRect(x: panel.frame.midX - IslandLayout.panelSize.width / 2,
+                             y: panel.frame.maxY - state.expandedHeight,
+                             width: IslandLayout.panelSize.width, height: state.expandedHeight + 60)
+        if !visible.contains(NSEvent.mouseLocation) { state.expanded = false }
     }
+}
+
+/// Janela quase transparente (1% de preto) só para receber o aviso de entrada do mouse.
+final class HoverTrigger: NSPanel {
+    var onEnter: () -> Void = {}
+
+    init() {
+        super.init(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        isOpaque = false
+        backgroundColor = .clear
+        hasShadow = false
+        level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 1)
+        collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
+        let view = HoverView()
+        view.onEnter = { [weak self] in self?.onEnter() }
+        contentView = view
+    }
+}
+
+final class HoverView: NSView {
+    var onEnter: () -> Void = {}
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.black.withAlphaComponent(0.01).cgColor
+        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func mouseEntered(with event: NSEvent) { onEnter() }
 }
